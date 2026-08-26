@@ -1,3 +1,5 @@
+import httpx
+
 from geo_agent.tools.weather import _get_weather
 
 
@@ -27,3 +29,13 @@ def test_weather_rejects_incomplete_payload(httpx_mock):
 
     assert result["ok"] is False
     assert result["error"] == "Open-Meteo returned incomplete current weather data"
+
+
+def test_weather_returns_structured_network_failure(httpx_mock):
+    httpx_mock.add_exception(httpx.ConnectError("network down"))
+
+    result = _get_weather(-31.42, -64.19)
+
+    assert result["ok"] is False
+    assert result["data"] is None
+    assert "Open-Meteo request failed" in result["error"]
