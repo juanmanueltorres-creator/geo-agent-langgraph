@@ -20,3 +20,31 @@ def test_cli_rejects_missing_key(capsys, monkeypatch):
 
     assert main(["Analyze Córdoba"]) == 2
     assert "DEEPSEEK_API_KEY is required" in capsys.readouterr().err
+
+
+def test_cli_prints_tools_and_final_answer(capsys, monkeypatch):
+    from geo_agent import cli
+
+    class FakeGraph:
+        def invoke(self, state):
+            assert state["question"] == "Analyze Córdoba"
+            return {
+                **state,
+                "tool_results": [
+                    {
+                        "ok": True,
+                        "tool": "get_elevation",
+                        "data": {"elevation_m": 390.0},
+                        "error": None,
+                    }
+                ],
+                "final_answer": "Córdoba is about 390 m above sea level.",
+            }
+
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "fake")
+    monkeypatch.setattr(cli, "build_graph", lambda: FakeGraph())
+
+    assert cli.main(["Analyze Córdoba"]) == 0
+    output = capsys.readouterr().out
+    assert "Tools used: get_elevation" in output
+    assert "Córdoba is about 390 m above sea level." in output
